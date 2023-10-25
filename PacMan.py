@@ -23,14 +23,22 @@ inky_color = 'blue'
 clide_color = 'orange'
 
 #ghosts_coordinates
-blinky_x = 250
-blinky_y = 250
+blinky_x = 35
+blinky_y = 33
+blinky_direction = 0
+blinky_box = False
 pinky_x = 300
 pinky_y = 270
+pinky_direction = 2
+pinky_box = False
 inky_x = 270
 inky_y = 250
-clide_x = 300
-clide_y = 300
+inky_direction = 2
+inky_box = False
+clide_x = 230
+clide_y = 250
+clide_direction = 2
+clide_box = False
 
 player_x = 290
 player_y = 410
@@ -42,9 +50,73 @@ turns_allowed = [False, False, False, False]
 direction_command = 0
 player_speed = 2
 
-# Coordinates and speed of the ghosts
-ghost_coords = [(250, 250), (300, 270)]  # Початкові координати привидів
+
+eaten_ghost = [False, False, False, False]
+targets = [(player_x, player_y), (player_x, player_y), (player_x, player_y), (player_x, player_y)]
+
 ghost_speed = 1  # Швидкість руху привидів
+
+
+
+class Ghost:
+    def __init__(self, x_coord, y_coord, target, speed, color, direct, box, id):
+        self.x_pos = x_coord
+        self.y_pos = y_coord
+        self.center_x = self.x_pos + 11
+        self.center_y = self.y_pos + 11
+        self.target = target
+        self.speed = speed
+        self.color = color
+        self.direction = direct
+        self.in_box = box
+        self.id = id
+        self.turns = check_position(self.center_x, self.center_y)
+        self.circle = self.draw()
+
+    def draw(self):
+        pygame.draw.circle(screen, self.color, (self.center_x, self.center_y), 11)
+
+    def move_clyde(self):
+        # Перевіряємо розташування гравця
+        player_center_x = player_x + 11
+        player_center_y = player_y + 11
+
+        # Отримуємо доступ до можливих напрямків руху
+        self.turns = check_position(self.center_x, self.center_y)
+
+        # Якщо гравець перебуває праворуч від "Clyde" і є можливість повороту вправо
+        if player_center_x > self.center_x and self.turns[0]:
+            self.direction = 0  # Рух вправо
+            self.x_pos += self.speed
+        # Якщо гравець перебуває ліворуч від "Clyde" і є можливість повороту вліво
+        elif player_center_x < self.center_x and self.turns[1]:
+            self.direction = 1  # Рух вліво
+            self.x_pos -= self.speed
+        # Якщо гравець перебуває нижче від "Clyde" і є можливість повороту вниз
+        elif player_center_y > self.center_y and self.turns[3]:
+            self.direction = 3  # Рух вниз
+            self.y_pos += self.speed
+        # Якщо гравець перебуває вище від "Clyde" і є можливість повороту вверх
+        elif player_center_y < self.center_y and self.turns[2]:
+            self.direction = 2  # Рух вверх
+            self.y_pos -= self.speed
+
+        # Обробка випадку, коли гравець і "Clyde" вже близько одне до одного,
+        # ви можете додати свою логіку тут.
+
+        # Змінюємо координати центра привида
+        self.center_x = self.x_pos + 11
+        self.center_y = self.y_pos + 11
+
+        # Перевірка на виход за межі екрану
+        if self.x_pos < -30:
+            self.x_pos = 900
+        elif self.x_pos > 900:
+            self.x_pos - 30
+
+        return self.x_pos, self.y_pos, self.direction
+
+
 
 
 def draw_board():
@@ -93,13 +165,7 @@ def draw_player():
         screen.blit(pygame.transform.rotate(player_images[counter // 5], 270), (player_x, player_y))
 
 
-def draw_ghosts(ghosts):
-    ghost_color = 'blue'  # Колір привидів
-    for ghost_x, ghost_y in ghosts:
-        pygame.draw.circle(screen, ghost_color, (ghost_x, ghost_y), 11)
 
-# Викликайте функцію draw_ghosts для відображення привидів
-draw_ghosts(ghost_coords)
 
 
 #if we allowed to turn or no
@@ -164,20 +230,6 @@ def move_player(play_x, play_y):
         play_y += player_speed
     return play_x, play_y
 
-def move_ghosts(ghosts, player_x, player_y):
-    new_ghosts = []
-    for ghost_x, ghost_y in ghosts:
-        # Визначаємо напрямок руху для привида
-        if ghost_x < player_x:
-            ghost_x += ghost_speed
-        elif ghost_x > player_x:
-            ghost_x -= ghost_speed
-        if ghost_y < player_y:
-            ghost_y += ghost_speed
-        elif ghost_y > player_y:
-            ghost_y -= ghost_speed
-        new_ghosts.append((ghost_x, ghost_y))
-    return new_ghosts
 
 
 run = True
@@ -193,12 +245,20 @@ while run:
     screen.fill('black')
     draw_board()
     draw_player()
-    draw_ghosts(ghost_coords)
+    blinky = Ghost(blinky_x, blinky_y, targets[0], ghost_speed, blinky_color, blinky_direction,
+                   blinky_box, 0)
+    inky = Ghost(inky_x, inky_y, targets[1], ghost_speed, inky_color, inky_direction,
+                 inky_box, 1)
+    pinky = Ghost(pinky_x, pinky_y, targets[2], ghost_speed, pinky_color, pinky_direction,
+                  pinky_box, 2)
+    clyde = Ghost(clide_x, clide_y, targets[3], ghost_speed, clide_color, clide_direction,
+                  clide_box, 3)
+    
     center_x = player_x+11
     center_y = player_y+11
     turns_allowed = check_position(center_x, center_y)
     player_x, player_y = move_player(player_x, player_y)
-    ghost_coords = move_ghosts(ghost_coords, player_x, player_y)
+    blinky_x, blinky_y, blinky_direction = blinky.move_clyde()
     for event in pygame.event.get():
         if event.type==pygame.QUIT:
             run=False
