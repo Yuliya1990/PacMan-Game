@@ -1,5 +1,7 @@
 import pygame
 from board import boards
+import heapq
+
 pygame.init()
 import math
 
@@ -27,8 +29,8 @@ blinky_x = 35
 blinky_y = 33
 blinky_direction = 0
 blinky_box = False
-pinky_x = 300
-pinky_y = 270
+pinky_x = 430
+pinky_y = 150
 pinky_direction = 2
 pinky_box = False
 inky_x = 270
@@ -72,9 +74,99 @@ class Ghost:
         self.id = id
         self.turns = check_position(self.center_x, self.center_y)
         self.circle = self.draw()
+        self.last_move_time = 0 
+        self.move_delay = 500 
 
     def draw(self):
         pygame.draw.circle(screen, self.color, (self.center_x, self.center_y), 11)
+
+
+
+    def move_pinky(self):
+        # Separate timer for Pinky's movement
+        current_time = pygame.time.get_ticks()
+        if current_time - self.last_move_time < self.move_delay:
+            return self.x_pos, self.y_pos, self.direction
+        self.last_move_time = current_time
+
+        # Define a heuristic function for A* (Manhattan distance)
+        def heuristic(position, target):
+            return abs(position[0] - target[0]) + abs(position[1] - target[1])
+
+        # Convert Pinky's and player's positions to grid coordinates
+        start = (self.x_pos // 30, self.y_pos // 32)  # Pinky's current position
+        target = (player_x // 30, player_y // 32)  # Player's position
+
+        open_list = []  # Priority queue for open nodes
+        heapq.heappush(open_list, (0, start))  # Add the start node with priority 0
+        came_from = {}  # Dictionary to store the parent of each node
+
+        g_score = {start: 0}  # Dictionary to store the cost from the start to each node
+        f_score = {start: heuristic(start, target)}  # Dictionary to store f scores
+
+        while open_list:
+            _, current = heapq.heappop(open_list)  # Get the node with the lowest f score
+
+            if current == target:
+                # Reconstruct the path
+                path = []
+                while current in came_from:
+                    path.append(current)
+                    current = came_from[current]
+                path.reverse()
+
+                # Move Pinky along the path
+                if len(path) > 1:
+                    next_node = path[1]
+                    next_x, next_y = next_node[0] * 30, next_node[1] * 32
+                    if next_x > self.x_pos:
+                        self.direction = 0  # Move right
+                    elif next_x < self.x_pos:
+                        self.direction = 1  # Move left
+                    elif next_y < self.y_pos:
+                        self.direction = 2  # Move up
+                    elif next_y > self.y_pos:
+                        self.direction = 3  # Move down
+                    # Slow down Pinky's movement (adjust this value as needed)
+                    move_distance = min(self.speed, 1)
+                    dx, dy = 0, 0
+                    if self.direction == 0:
+                        dx = move_distance
+                    elif self.direction == 1:
+                        dx = -move_distance
+                    elif self.direction == 2:
+                        dy = -move_distance
+                    elif self.direction == 3:
+                        dy = move_distance
+                    self.x_pos += dx
+                    self.y_pos += dy
+
+                    # Check if Pinky is close to the next node (for smoother movement)
+                    if (
+                        abs(self.x_pos - next_x) <= move_distance
+                        and abs(self.y_pos - next_y) <= move_distance
+                    ):
+                        self.x_pos, self.y_pos = next_x, next_y
+
+                return self.x_pos, self.y_pos, self.direction
+
+            for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+                neighbor = (current[0] + dx, current[1] + dy)
+                tentative_g_score = g_score[current] + 1
+
+                if (
+                    0 <= neighbor[0] < len(level[0])
+                    and 0 <= neighbor[1] < len(level)
+                    and level[neighbor[1]][neighbor[0]] < 3  # Check if it's a valid tile
+                ):
+                    if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
+                        came_from[neighbor] = current
+                        g_score[neighbor] = tentative_g_score
+                        f_score[neighbor] = tentative_g_score + heuristic(neighbor, target)
+                        heapq.heappush(open_list, (f_score[neighbor], neighbor))
+
+        # If there is no valid path, return the current position
+        return self.x_pos, self.y_pos, self.direction
 
     def move_clyde(self):
         # Перевіряємо розташування гравця
@@ -259,6 +351,7 @@ while run:
     turns_allowed = check_position(center_x, center_y)
     player_x, player_y = move_player(player_x, player_y)
     blinky_x, blinky_y, blinky_direction = blinky.move_clyde()
+    pinky_x, pinky_y, pinky_direction = pinky.move_pinky()
     for event in pygame.event.get():
         if event.type==pygame.QUIT:
             run=False
