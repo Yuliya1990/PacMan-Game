@@ -1,0 +1,50 @@
+* { 
+    /*outline: 1px dotted purple; */
+}
+
+.wall {
+    width: 50px;
+    height: 50px;
+    background-image: url('wall.png');
+    display: inline-block;
+}
+.coin {
+    width: 50px;
+    height: 50px;
+    background-image: url('coin.png');
+    display: inline-block;
+}
+.ground {
+    width: 50px;
+    height: 50px;
+    background-image: url('bg.png');
+    display: inline-block;
+}
+.ghostStatic {
+    width: 50px;
+    height: 50px;
+    background-image: url('ghost1.png');
+    display: inline-block;
+}
+.ghostRandom{
+    width: 50px;
+    height: 50px;
+    background-image: url('ghost2.png');
+    display: inline-block;
+}
+.ghostHunter{
+    width: 50px;
+    height: 50px;
+    background-image: url('ghost3.png');
+    display: inline-block;
+}
+.pacman {
+    width: 50px;
+    height: 50px;
+    background-image: url('pacman.png');
+    display: inline-block;
+}
+
+div {
+    line-height: 0px;
+}
